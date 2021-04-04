@@ -98,7 +98,7 @@ function main() {
     gl.uniform4f(u_FragColor, 0, 0, 0, 1);
     gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(a_Position);
-    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLE_STRIP, n, gl.UNSIGNED_SHORT, 0);
     console.log(n);
     
     
@@ -226,7 +226,7 @@ function Time() {
 
 function CreateSphere(gl) {
 
-  var SPHERE_DIV = 6;
+  var SPHERE_DIV = 32;
   var i, ai, si, ci;
   var j, aj, sj, cj;
   var p1, p2;
@@ -268,6 +268,8 @@ function CreateSphere(gl) {
   var indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+  
 
   return indices.length;
 }
