@@ -1,0 +1,42 @@
+// //VERTICES
+  // var vertexBuffer = gl.createBuffer();
+  // if (!vertexBuffer) {
+  //   console.log('Failed to create the buffer object');
+  //   return -1;
+  // }
+  // gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+  // //Get the storage location of a_Position 
+  // var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+  // if(a_Position < 0){
+  //     console.log('Fail to get the storage location of a_Position');
+  //     return -1;
+  // }
+  // gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
+  // // Enable the assignment of the buffer object to the attribute variable
+  // gl.enableVertexAttribArray(a_Position);
+  // //END VERTICES
+
+  // // COLOUR
+  // // console.log(colours);
+
+  // var colourBuffer = gl.createBuffer();
+  // if (!colourBuffer) {
+  //   console.log('Failed to create the colour buffer object');
+  //   return -1;
+  // }
+
+  // gl.bindBuffer(gl.ARRAY_BUFFER, colourBuffer);
+  // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colours), gl.STATIC_DRAW); 
+
+  // var a_Colour = gl.getAttribLocation(gl.program, 'a_Colour');
+  // if(a_Colour < 0){
+  //   console.log('Fail to get the storage location of a_Colour');
+  //   return -1; 
+  // }
+
+  // gl.vertexAttribPointer(a_Colour, 3, gl.FLOAT, false, 0, 0);
+  // // Enable the assignment of the buffer object to the attribute variable
+  // gl.enableVertexAttribArray(a_Colour);
+  // //END COLOURS

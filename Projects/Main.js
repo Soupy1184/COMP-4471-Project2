@@ -3,11 +3,16 @@
 var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'attribute vec4 a_Colour;\n' +
+  'attribute vec4 a_Normal;\n' +
   'uniform mat4 u_MvpMatrix;\n' +
+  'uniform mat4 u_NormalMatrix;\n' +
+  'uniform vec3 u_LightDirection;\n' +
   'varying vec4 v_Colour;\n' +
   'void main() {\n' +
   '  gl_Position = u_MvpMatrix * a_Position;\n' +
-  '  v_Colour = a_Colour;\n' +
+  '  vec4 normal = u_NormalMatrix * a_Normal;\n' +
+  '  float nDotL = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);\n' +
+  '  v_Colour = vec4(a_Colour.xyz * nDotL, a_Colour.a);\n' + 
   '}\n';
 
 // Fragment shader program
@@ -24,11 +29,48 @@ var FSHADER_SOURCE =
 var timer = Date.now();
 var gameIsActive = true;
 var score = 0; //player score
+var ANGLE_STEP = 0.0;
 
 function main() {
+
+  
+
   // Retrieve <canvas> element
   var canvas = document.querySelector('#webgl');
 
+  //rotate left
+  document.addEventListener('keydown', function (evt) {
+    if (evt.keyCode == 37) {
+      ANGLE_STEP = -50.0;
+    }
+  });
+
+  //rotate right
+  document.addEventListener('keydown', function (evt) {
+    if (evt.keyCode == 39) {
+      ANGLE_STEP = 50.0;
+    }
+  });
+
+  // //rotate up
+  // document.addEventListener('keydown', function (evt) {
+  //   if (evt.keyCode == 38) {
+  //     ANGLE_STEP = -50.0;
+  //   }
+  // });
+
+  // //rotate down
+  // document.addEventListener('keydown', function (evt) {
+  //   if (evt.keyCode == 40) {
+  //     ANGLE_STEP = 50.0;
+  //   }
+  // });
+  
+  document.addEventListener('keyup', function (evt) {
+    if (evt.keyCode == 37 || evt.keyCode == 39 || evt.keyCode == 38 || evt.keyCode == 40) {
+      ANGLE_STEP = 0.0;
+    }
+  });
   //hide restart button
   document.getElementById("restartBtn").style.display = "none";
 
@@ -53,29 +95,29 @@ function main() {
 
   var timeLoc = gl.getUniformLocation(gl.program, 'time');
 
-  
-  gl.clearColor(1.0, 1.0, 1.0, 1.0);
-  gl.enable(gl.DEPTH_TEST);
-
-  // Get the storage location of u_MvpMatrix
+  // Get the storage locations of uniform variables and so on
   var u_MvpMatrix = gl.getUniformLocation(gl.program, 'u_MvpMatrix');
-  if (!u_MvpMatrix) {
-    console.log('Failed to get the storage location of u_MvpMatrix');
+  var u_NormalMatrix = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
+  var u_LightDirection = gl.getUniformLocation(gl.program, 'u_LightDirection');
+  if (!u_MvpMatrix || !u_NormalMatrix || !u_LightDirection) { 
+    console.log('Failed to get the storage location');
     return;
   }
 
   // Set the eye point and the viewing volume
-  var mvpMatrix = new Matrix4();
-  mvpMatrix.setPerspective(30, 1, 1, 100);
-  mvpMatrix.lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
-
-  // Pass the model view projection matrix to u_MvpMatrix
-  gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
-
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_SHORT, 0);
+  var vpMatrix = new Matrix4();   // View projection matrix
+  // Calculate the view projection matrix
+  vpMatrix.setPerspective(30, canvas.width/canvas.height, 1, 100);
+  vpMatrix.lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
+  // Set the light direction (in the world coordinate)
+  var lightDirection = new Vector3([0.5, 3.0, 4.0]);
+  lightDirection.normalize();     // Normalize
+  gl.uniform3fv(u_LightDirection, lightDirection.elements);
   
- 
+  var currentAngle = 0.0;  // Current rotation angle
+  var modelMatrix = new Matrix4();  // Model matrix
+  var mvpMatrix = new Matrix4();    // Model view projection matrix
+  var normalMatrix = new Matrix4(); // Transformation matrix for normals
 
   // var positionBuffer = gl.createBuffer();
   // gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -90,23 +132,35 @@ function main() {
 
   var scoreText = document.getElementById('score');
 
-  // //LOOP
-  // function render(time) {
-  //   // Specify the color for clearing <canvas>
-  //   gl.clearColor(1, 1, 1, 1);
+  //LOOP
+  function render(time) {
+    currentAngle = animate(currentAngle);
+    //   // Specify the color for clearing <canvas>
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
 
-  //   // Clear <canvas>
-  //   gl.clear(gl.COLOR_BUFFER_BIT);
-  //   time *= 0.001;  // convert to seconds
-  //   Time();
+    // Calculate the model matrix
+    modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+    mvpMatrix.set(vpMatrix).multiply(modelMatrix);
+    gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
 
-  //   canvas.onmousedown = function(ev){ click(ev, canvas, bacteria); };
+    // Pass the matrix to transform the normal based on the model matrix to u_NormalMatrix
+    normalMatrix.setInverseOf(modelMatrix);
+    normalMatrix.transpose();
+    gl.uniformMatrix4fv(u_NormalMatrix, false, normalMatrix.elements);
 
-  //   //play surface - change to sphere
-  //   // gl.uniform4f(u_FragColor, 0, 0, 0, 1);
-    
-    
-  //   console.log(n);
+    // Clear <canvas>
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    time *= 0.001;  // convert to seconds
+    Time();
+
+    canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
+    canvas.onkeydown = function(ev) { checkKey(ev); };
+
+    //play surface - change to sphere
+    gl.drawElements(gl.TRIANGLE_STRIP, n, gl.UNSIGNED_SHORT, 0);
+      
+    // console.log("here");
     
     
   //   // tell the shader the time
@@ -212,27 +266,18 @@ function main() {
   //   // el = time;
     
   //   // if (gameIsActive){
-  //   // requestAnimationFrame(render);
+    requestAnimationFrame(render);
   //   // } else {
   //   //   document.getElementById("restartBtn").style.display = "inline-block";
   //   // }
-  // }
-  // requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
 }
 
-var elapsed;
-function Time() {
-  // Calculate the elapsed time
-  var now = Date.now();
-  elapsed = now - timer;
-  elapsed = Math.floor(elapsed*0.001);
-  if (elapsed > 2){
-    timer = Date.now();
-  }
-}
+
 
 function CreateSphere(gl) {
-  var SPHERE_DIV = 12;
+  var SPHERE_DIV = 32;
   var i, ai, si, ci;
   var j, aj, sj, cj;
   var p1, p2;
@@ -269,48 +314,15 @@ function CreateSphere(gl) {
     colours.push(Math.random());
   }
 
-  //VERTICES
-  var vertexBuffer = gl.createBuffer();
-  if (!vertexBuffer) {
-    console.log('Failed to create the buffer object');
-    return -1;
-  }
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-  //Get the storage location of a_Position 
-  var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
-  if(a_Position < 0){
-      console.log('Fail to get the storage location of a_Position');
-      return -1;
-  }
-  gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
-  // Enable the assignment of the buffer object to the attribute variable
-  gl.enableVertexAttribArray(a_Position);
-  //END VERTICES
-
-  //COLOUR
-  // console.log(colours);
-
-  var colourBuffer = gl.createBuffer();
-  if (!colourBuffer) {
-    console.log('Failed to create the colour buffer object');
-    return -1;
+  var normals = [];
+  for (i = 0; i < vertices.length; i++){
+    normals.push(Math.random());
   }
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, colourBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colours), gl.STATIC_DRAW); 
+  if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 3, gl.FLOAT)) return -1;
+  if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 3, gl.FLOAT)) return -1;
+  if (!initArrayBuffer(gl, 'a_Normal', new Float32Array(normals), 3, gl.FLOAT)) return -1;
 
-  var a_Colour = gl.getAttribLocation(gl.program, 'a_Colour');
-  if(a_Colour < 0){
-    console.log('Fail to get the storage location of a_Colour');
-    return -1; 
-  }
-
-  gl.vertexAttribPointer(a_Colour, 3, gl.FLOAT, false, 0, 0);
-  // Enable the assignment of the buffer object to the attribute variable
-  gl.enableVertexAttribArray(a_Colour);
-  //END COLOURS
 
   var indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -323,8 +335,40 @@ function CreateSphere(gl) {
   return indices.length;
 }
 
+function initArrayBuffer(gl, attribute, data, num, type) {
+  // Create a buffer object
+  var buffer = gl.createBuffer();
+  if (!buffer) {
+    console.log('Failed to create the buffer object');
+    return false;
+  }
+  // Write date into the buffer object
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  // Assign the buffer object to the attribute variable
+  var a_attribute = gl.getAttribLocation(gl.program, attribute);
+  if (a_attribute < 0) {
+    console.log('Failed to get the storage location of ' + attribute);
+    return false;
+  }
+  gl.vertexAttribPointer(a_attribute, num, type, false, 0, 0);
+  // Enable the assignment of the buffer object to the attribute variable
+  gl.enableVertexAttribArray(a_attribute);
+
+  return true;
+}
 
 
+var elapsed;
+function Time() {
+  // Calculate the elapsed time
+  var now = Date.now();
+  elapsed = now - timer;
+  elapsed = Math.floor(elapsed*0.001);
+  if (elapsed > 2){
+    timer = Date.now();
+  }
+}
 
 function onClickRestart() {
   location.reload();
@@ -355,11 +399,34 @@ function click(ev, canvas, bacteria){
         console.log(bacteria);
       }
     }
-
   }
-  
 }
 
+// Rotation angle (degrees/second)
+
+// Last time that this function was called
+var g_last = Date.now();
+function animate(angle) {
+  // Calculate the elapsed time
+  var now = Date.now();
+  var elapsed = now - g_last;
+  g_last = now;
+  // Update the current rotation angle (adjusted by the elapsed time)
+  var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
+  return newAngle %= 360;
+}
+
+
+
+
+
+// function speedUp(){
+//   ANGLE_STEP += 10.0;
+// }
+
+// function slowDown(){
+//   ANGLE_STEP -= 10.0;
+// }
 
 // function CreateCircle(gl, x, y, r, n){
   //   var circle = {x: x, y:y, r: r};
