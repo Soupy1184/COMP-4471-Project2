@@ -40,3 +40,34 @@
   // // Enable the assignment of the buffer object to the attribute variable
   // gl.enableVertexAttribArray(a_Colour);
   // //END COLOURS
+
+
+  ///CIRCLE STUFF
+
+  // function CreateCircle(gl, x, y, r, n){
+  //   var circle = {x: x, y:y, r: r};
+  //   var degreePerFan = (2 * Math.PI) / (n - 2);
+  //   var vertexData = [x, y]; //origin
+  
+  //   for(var i = 1; i < n; i++) {
+  //     var angle = degreePerFan * (i+1);
+  //     vertexData[i*2] =  circle.x + Math.cos(angle) * circle.r;
+  //     vertexData[(i*2) + 1] = circle.y + Math.sin(angle) * circle.r;
+  //   }
+  
+  //   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
+  // }
+  
+  // function StoreCircle(x, y, r, n){
+  //   var circle = {x: x, y:y, r: r};
+  //   var degreePerFan = (2 * Math.PI) / (n - 2);
+  //   var vertexData = [x, y]; //origin
+  
+  //   for(var i = 1; i < n; i++) {
+  //     var angle = degreePerFan * (i+1);
+  //     vertexData[i*2] =  circle.x + Math.cos(angle) * circle.r;
+  //     vertexData[(i*2) + 1] = circle.y + Math.sin(angle) * circle.r;
+  //   }
+  
+  //   return vertexData;
+  // }
