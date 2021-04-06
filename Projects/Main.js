@@ -331,6 +331,7 @@ function CreateSphere(gl) {
   console.log("Vertices length: " + vertices.length + "\n");
   console.log("Colors length: " + colours.length + "\n");
   console.log("Indices length: " + indices.length + "\n");
+  console.log("Normals length: " + normals.length + "\n");
 
   return indices.length;
 }
