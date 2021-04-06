@@ -39,38 +39,7 @@ function main() {
   var canvas = document.querySelector('#webgl');
 
   //rotate left
-  document.addEventListener('keydown', function (evt) {
-    if (evt.keyCode == 37) {
-      ANGLE_STEP = -50.0;
-    }
-  });
-
-  //rotate right
-  document.addEventListener('keydown', function (evt) {
-    if (evt.keyCode == 39) {
-      ANGLE_STEP = 50.0;
-    }
-  });
-
-  // //rotate up
-  // document.addEventListener('keydown', function (evt) {
-  //   if (evt.keyCode == 38) {
-  //     ANGLE_STEP = -50.0;
-  //   }
-  // });
-
-  // //rotate down
-  // document.addEventListener('keydown', function (evt) {
-  //   if (evt.keyCode == 40) {
-  //     ANGLE_STEP = 50.0;
-  //   }
-  // });
   
-  document.addEventListener('keyup', function (evt) {
-    if (evt.keyCode == 37 || evt.keyCode == 39 || evt.keyCode == 38 || evt.keyCode == 40) {
-      ANGLE_STEP = 0.0;
-    }
-  });
   //hide restart button
   document.getElementById("restartBtn").style.display = "none";
 
@@ -87,10 +56,21 @@ function main() {
     return;
   }
   
-  var n = CreateSphere(gl);
-  if (n < 0) {
+  var object = CreateSphere(gl, 1, 1, 0.1);
+  if (!object) {
     console.log('Failed to set the vertex information');
     return;
+  }
+
+  var object2 = CreateSphere(gl, 1.01, 1.01, 0.9);
+  if (!object2) {
+    console.log('Failed to set the vertex information');
+    return;
+  }
+
+  object2test = [];
+  for (i = 0; i < 1344 ; i++){
+    object2test.push(object2.indices[i]);
   }
 
   var timeLoc = gl.getUniformLocation(gl.program, 'time');
@@ -134,13 +114,40 @@ function main() {
 
   //LOOP
   function render(time) {
-    currentAngle = animate(currentAngle);
+    
     //   // Specify the color for clearing <canvas>
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
 
     // Calculate the model matrix
-    modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+    document.addEventListener('keydown', function (evt) {
+      if (evt.keyCode == 37) {//rotate left
+        modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+        ANGLE_STEP = -50.0;
+      }
+      else if (evt.keyCode == 39) {//rotate right
+        modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+        ANGLE_STEP = 50.0;
+      }
+      else if (evt.keyCode == 38) {//rotate up
+        modelMatrix.setRotate(currentAngle, 1, 0, 0); // Rotate around the y-axis
+        ANGLE_STEP = -50.0;
+      }
+      else if (evt.keyCode == 40) { //rotate down
+        modelMatrix.setRotate(currentAngle, 1, 0, 0); // Rotate around the y-axis
+        ANGLE_STEP = 50.0;
+      }
+    });
+    
+    document.addEventListener('keyup', function (evt) {
+      if (evt.keyCode == 37 || evt.keyCode == 39 || evt.keyCode == 38 || evt.keyCode == 40) {
+        ANGLE_STEP = 0.0;
+      }
+    });
+
+    currentAngle = animate(currentAngle);
+
+
     mvpMatrix.set(vpMatrix).multiply(modelMatrix);
     gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
 
@@ -155,16 +162,16 @@ function main() {
     Time();
 
     canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
-    canvas.onkeydown = function(ev) { checkKey(ev); };
 
-    //play surface - change to sphere
-    gl.drawElements(gl.TRIANGLE_STRIP, n, gl.UNSIGNED_SHORT, 0);
-      
-    // console.log("here");
     
     
-  //   // tell the shader the time
-  //   gl.uniform1f(timeLoc, time);
+
+    //draw objects
+    draw(gl, object.vertices, object.colours, object.indices, object.normals);
+    draw(gl, object2.vertices, object2.colours, object2test, object2.normals);
+    
+    // tell the shader the time
+    gl.uniform1f(timeLoc, time);
   //   console.log("here");
   //   // //create new starting bacteria
   //   // if((elapsed + 1) % 4 == 0) {
@@ -276,7 +283,7 @@ function main() {
 
 
 
-function CreateSphere(gl) {
+function CreateSphere(gl, x, y, colour) {
   var SPHERE_DIV = 32;
   var i, ai, si, ci;
   var j, aj, sj, cj;
@@ -286,12 +293,12 @@ function CreateSphere(gl) {
     aj = j * Math.PI / SPHERE_DIV;
     sj = Math.sin(aj);
     cj = Math.cos(aj);
-    for (i = 0; i <= SPHERE_DIV; i++) {
+    for (i = 10; i <= SPHERE_DIV +10; i++) {
       ai = i * 2 * Math.PI / SPHERE_DIV;
       si = Math.sin(ai);
       ci = Math.cos(ai);
-      vertices.push(si * sj);  // X
-      vertices.push(cj);       // Y
+      vertices.push(si * sj * x);  // X
+      vertices.push(cj * y);       // Y
       vertices.push(ci * sj);  // Z
     }
   }
@@ -308,32 +315,46 @@ function CreateSphere(gl) {
       indices.push(p2 + 1);
     }
   }
+  
+
+  
+  //use only the first 1344 indices of testIndices
+  //1344 = 192 * 7
+  // var test = [];
+  // for (i = 0; i < 1344; i++){
+  //   test.push(testIndices[i]);
+  // }
+
 
   var colours = [];
   for (i = 0; i < vertices.length; i++){
-    colours.push(Math.random());
+    colours.push((Math.random() * (colour +0.1)) + (colour - 0.1));
   }
 
+  
+  // var testColours = [];
+  // for (i = 0; i < testVertices.length; i++){
+  //   colours.push(0.0);
+  // }
+
+  
   var normals = [];
   for (i = 0; i < vertices.length; i++){
     normals.push(Math.random());
   }
 
-  if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 3, gl.FLOAT)) return -1;
-  if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 3, gl.FLOAT)) return -1;
-  if (!initArrayBuffer(gl, 'a_Normal', new Float32Array(normals), 3, gl.FLOAT)) return -1;
+  // for(i = 0; i < testVertices.length; i++){
+  //   normals.push(Math.random());
+  // }
 
+  // vertices = vertices.concat(testVertices);
+  // colours = colours.concat(testColours);
+  // indices = indices.concat(test);
+  return {vertices, indices, colours, normals};
 
-  var indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  
 
-  console.log("Vertices length: " + vertices.length + "\n");
-  console.log("Colors length: " + colours.length + "\n");
-  console.log("Indices length: " + indices.length + "\n");
-  console.log("Normals length: " + normals.length + "\n");
-
-  return indices.length;
+  
 }
 
 function initArrayBuffer(gl, attribute, data, num, type) {
@@ -403,7 +424,7 @@ function click(ev, canvas, bacteria){
   }
 }
 
-// Rotation angle (degrees/second)
+
 
 // Last time that this function was called
 var g_last = Date.now();
@@ -418,16 +439,19 @@ function animate(angle) {
 }
 
 
+function draw(gl, vertices, colours, indices, normals){
+  if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 3, gl.FLOAT)) return -1;
+  if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 3, gl.FLOAT)) return -1;
+  if (!initArrayBuffer(gl, 'a_Normal', new Float32Array(normals), 3, gl.FLOAT)) return -1;
 
 
+  var indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-// function speedUp(){
-//   ANGLE_STEP += 10.0;
-// }
-
-// function slowDown(){
-//   ANGLE_STEP -= 10.0;
-// }
+  //play surface - change to sphere
+  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+}
 
 // function CreateCircle(gl, x, y, r, n){
   //   var circle = {x: x, y:y, r: r};
