@@ -287,6 +287,7 @@ function main() {
 }
 
 function CreateSphere(size, colour) {
+  //resource: https://stackoverflow.com/questions/47756053/webgl-try-draw-sphere
   var SPHERE_DIV = 32;
   var ai, si, ci;
   var aj, sj, cj;
@@ -318,6 +319,7 @@ function CreateSphere(size, colour) {
       indices.push(p2 + 1);
     }
   }
+  //end resource
 
   var colours = [];
   for (i = 0; i < vertices.length; i++){
