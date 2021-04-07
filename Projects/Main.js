@@ -165,12 +165,14 @@ function main() {
     var ANGLE = 87.0;
     mvpMatrix.rotate(ANGLE, 1, 1, 0);
     gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
-    //draw object
+    //draw second object
     draw(gl, object2.vertices, object2.colours, object2test);
 
+    //SET ROTATION 2
     ANGLE = 190.0;
     mvpMatrix.rotate(ANGLE, 1, 1, 0);
     gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
+    //draw third object
     draw(gl, object3.vertices, object3.colours, object3test);
     
     // tell the shader the time
