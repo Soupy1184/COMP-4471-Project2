@@ -3,16 +3,11 @@
 var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'attribute vec4 a_Colour;\n' +
-  'attribute vec4 a_Normal;\n' +
   'uniform mat4 u_MvpMatrix;\n' +
-  'uniform mat4 u_NormalMatrix;\n' +
-  'uniform vec3 u_LightDirection;\n' +
   'varying vec4 v_Colour;\n' +
   'void main() {\n' +
   '  gl_Position = u_MvpMatrix * a_Position;\n' +
-  '  vec4 normal = u_NormalMatrix * a_Normal;\n' +
-  '  float nDotL = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);\n' +
-  '  v_Colour = vec4(a_Colour.xyz * nDotL, a_Colour.a);\n' + 
+  '  v_Colour = a_Colour;\n' +
   '}\n';
 
 // Fragment shader program
@@ -32,9 +27,6 @@ var score = 0; //player score
 var ANGLE_STEP = 0.0;
 
 function main() {
-
-  
-
   // Retrieve <canvas> element
   var canvas = document.querySelector('#webgl');
 
@@ -55,31 +47,50 @@ function main() {
     console.log('Failed to intialize shaders.');
     return;
   }
+
+  var purple = {r: 1.0, g: 1.0, b: 0.7}; // <- yellowish
+  var cyan = {r: 0.0, g: 0.4, b: 1.0}; // <- blueish
+  var black = {r: 0.0, g: 0.0, b: 0.0};
+  var playfieldSize = {x: 1.5, y: 1.5, z: 1.5};
+  var bacteriaSize = {x: 1.51, y: 1.51, z: 1.5};
   
-  var object = CreateSphere(gl, 1, 1, 0.1);
+  //INITIALIZING TEST OBJECTS
+
+  var object = CreateSphere(playfieldSize, black);
   if (!object) {
     console.log('Failed to set the vertex information');
     return;
   }
 
-  var object2 = CreateSphere(gl, 1.01, 1.01, 0.9);
+  var object2 = CreateSphere(bacteriaSize, purple);
   if (!object2) {
     console.log('Failed to set the vertex information');
     return;
   }
 
   object2test = [];
-  for (i = 0; i < 1344 ; i++){
+  for (i = 0; i < 960 ; i++){
     object2test.push(object2.indices[i]);
   }
+
+  var object3 = CreateSphere(bacteriaSize, cyan);
+  if (!object3) {
+    console.log('Failed to set the vertex information');
+    return;
+  }
+
+  object3test = [];
+  for (i = 0; i < 576 ; i++){
+    object3test.push(object3.indices[i]);
+  }
+
+  //END TEST OBJECTS
 
   var timeLoc = gl.getUniformLocation(gl.program, 'time');
 
   // Get the storage locations of uniform variables and so on
   var u_MvpMatrix = gl.getUniformLocation(gl.program, 'u_MvpMatrix');
-  var u_NormalMatrix = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
-  var u_LightDirection = gl.getUniformLocation(gl.program, 'u_LightDirection');
-  if (!u_MvpMatrix || !u_NormalMatrix || !u_LightDirection) { 
+  if (!u_MvpMatrix) {
     console.log('Failed to get the storage location');
     return;
   }
@@ -89,15 +100,12 @@ function main() {
   // Calculate the view projection matrix
   vpMatrix.setPerspective(30, canvas.width/canvas.height, 1, 100);
   vpMatrix.lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
-  // Set the light direction (in the world coordinate)
-  var lightDirection = new Vector3([0.5, 3.0, 4.0]);
-  lightDirection.normalize();     // Normalize
-  gl.uniform3fv(u_LightDirection, lightDirection.elements);
   
   var currentAngle = 0.0;  // Current rotation angle
   var modelMatrix = new Matrix4();  // Model matrix
   var mvpMatrix = new Matrix4();    // Model view projection matrix
-  var normalMatrix = new Matrix4(); // Transformation matrix for normals
+  
+
 
   // var positionBuffer = gl.createBuffer();
   // gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -118,57 +126,52 @@ function main() {
     //   // Specify the color for clearing <canvas>
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
+    currentAngle = animate(currentAngle);
 
-    // Calculate the model matrix
-    document.addEventListener('keydown', function (evt) {
-      if (evt.keyCode == 37) {//rotate left
+    canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
+    document.onkeydown = function (ev) {
+      if (ev.keyCode == 37) {//rotate left
         modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
-        ANGLE_STEP = -50.0;
+        ANGLE_STEP = -70.0;
       }
-      else if (evt.keyCode == 39) {//rotate right
+      else if (ev.keyCode == 39) {//rotate right
         modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
-        ANGLE_STEP = 50.0;
+        ANGLE_STEP = 70.0;
       }
-      else if (evt.keyCode == 38) {//rotate up
-        modelMatrix.setRotate(currentAngle, 1, 0, 0); // Rotate around the y-axis
-        ANGLE_STEP = -50.0;
-      }
-      else if (evt.keyCode == 40) { //rotate down
-        modelMatrix.setRotate(currentAngle, 1, 0, 0); // Rotate around the y-axis
-        ANGLE_STEP = 50.0;
-      }
-    });
-    
+    }
+  
     document.addEventListener('keyup', function (evt) {
-      if (evt.keyCode == 37 || evt.keyCode == 39 || evt.keyCode == 38 || evt.keyCode == 40) {
+      if (evt.keyCode == 37 || evt.keyCode == 39) {
         ANGLE_STEP = 0.0;
       }
     });
 
-    currentAngle = animate(currentAngle);
-
-
+    
     mvpMatrix.set(vpMatrix).multiply(modelMatrix);
     gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
-
-    // Pass the matrix to transform the normal based on the model matrix to u_NormalMatrix
-    normalMatrix.setInverseOf(modelMatrix);
-    normalMatrix.transpose();
-    gl.uniformMatrix4fv(u_NormalMatrix, false, normalMatrix.elements);
 
     // Clear <canvas>
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     time *= 0.001;  // convert to seconds
     Time();
 
-    canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
-
     
     
-
     //draw objects
+    //playsurface
     draw(gl, object.vertices, object.colours, object.indices, object.normals);
-    draw(gl, object2.vertices, object2.colours, object2test, object2.normals);
+
+    //SET ROTATION
+    var ANGLE = 87.0;
+    mvpMatrix.rotate(ANGLE, 1, 1, 0);
+    gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
+    //draw object
+    draw(gl, object2.vertices, object2.colours, object2test);
+
+    ANGLE = 190.0;
+    mvpMatrix.rotate(ANGLE, 1, 1, 0);
+    gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
+    draw(gl, object3.vertices, object3.colours, object3test);
     
     // tell the shader the time
     gl.uniform1f(timeLoc, time);
@@ -281,12 +284,10 @@ function main() {
   requestAnimationFrame(render);
 }
 
-
-
-function CreateSphere(gl, x, y, colour) {
+function CreateSphere(size, colour) {
   var SPHERE_DIV = 32;
-  var i, ai, si, ci;
-  var j, aj, sj, cj;
+  var ai, si, ci;
+  var aj, sj, cj;
   var p1, p2;
   var vertices = [], indices = [];
   for (j = 0; j <= SPHERE_DIV; j++) {
@@ -297,9 +298,9 @@ function CreateSphere(gl, x, y, colour) {
       ai = i * 2 * Math.PI / SPHERE_DIV;
       si = Math.sin(ai);
       ci = Math.cos(ai);
-      vertices.push(si * sj * x);  // X
-      vertices.push(cj * y);       // Y
-      vertices.push(ci * sj);  // Z
+      vertices.push(si * sj * size.x);  // X
+      vertices.push(cj * size.y);       // Y
+      vertices.push(ci * sj * size.z);  // Z
     }
   }
 
@@ -315,46 +316,15 @@ function CreateSphere(gl, x, y, colour) {
       indices.push(p2 + 1);
     }
   }
-  
-
-  
-  //use only the first 1344 indices of testIndices
-  //1344 = 192 * 7
-  // var test = [];
-  // for (i = 0; i < 1344; i++){
-  //   test.push(testIndices[i]);
-  // }
-
 
   var colours = [];
   for (i = 0; i < vertices.length; i++){
-    colours.push((Math.random() * (colour +0.1)) + (colour - 0.1));
+    colours.push(colour.r);
+    colours.push(colour.g);
+    colours.push(colour.b);
   }
 
-  
-  // var testColours = [];
-  // for (i = 0; i < testVertices.length; i++){
-  //   colours.push(0.0);
-  // }
-
-  
-  var normals = [];
-  for (i = 0; i < vertices.length; i++){
-    normals.push(Math.random());
-  }
-
-  // for(i = 0; i < testVertices.length; i++){
-  //   normals.push(Math.random());
-  // }
-
-  // vertices = vertices.concat(testVertices);
-  // colours = colours.concat(testColours);
-  // indices = indices.concat(test);
-  return {vertices, indices, colours, normals};
-
-  
-
-  
+  return {vertices, indices, colours};
 }
 
 function initArrayBuffer(gl, attribute, data, num, type) {
@@ -379,7 +349,6 @@ function initArrayBuffer(gl, attribute, data, num, type) {
 
   return true;
 }
-
 
 var elapsed;
 function Time() {
@@ -424,8 +393,6 @@ function click(ev, canvas, bacteria){
   }
 }
 
-
-
 // Last time that this function was called
 var g_last = Date.now();
 function animate(angle) {
@@ -438,12 +405,9 @@ function animate(angle) {
   return newAngle %= 360;
 }
 
-
-function draw(gl, vertices, colours, indices, normals){
+function draw(gl, vertices, colours, indices){
   if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 3, gl.FLOAT)) return -1;
   if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 3, gl.FLOAT)) return -1;
-  if (!initArrayBuffer(gl, 'a_Normal', new Float32Array(normals), 3, gl.FLOAT)) return -1;
-
 
   var indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);

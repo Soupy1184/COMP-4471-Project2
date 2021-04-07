@@ -6,7 +6,7 @@ class Bacteria {
         this.r = rgba[0];
         this.g = rgba[1];
         this.b = rgba[2];
-        this.a = rgba[3];
+        this.a = rgba[3]; 
         this.growthVerts = []; //stores side vertices
         this.edges = []; //edge circles
         this.radius = radius;
