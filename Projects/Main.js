@@ -296,7 +296,7 @@ function CreateSphere(size, colour) {
     aj = j * Math.PI / SPHERE_DIV;
     sj = Math.sin(aj);
     cj = Math.cos(aj);
-    for (i = 10; i <= SPHERE_DIV +10; i++) {
+    for (i = 0; i <= SPHERE_DIV; i++) {
       ai = i * 2 * Math.PI / SPHERE_DIV;
       si = Math.sin(ai);
       ci = Math.cos(ai);
