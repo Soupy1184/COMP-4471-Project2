@@ -25,6 +25,7 @@ var timer = Date.now();
 var gameIsActive = true;
 var score = 0; //player score
 var ANGLE_STEP = 0.0;
+var growth_rate = 1; //seconds
 
 //constants
 const purple = {r: 1.0, g: 1.0, b: 0.7}; // <- yellowish
@@ -33,6 +34,7 @@ const black = {r: 0.0, g: 0.0, b: 0.0};
 const playfieldSize = {x: 1.5, y: 1.5, z: 1.5};
 const bacteriaSize = {x: 1.52, y: 1.52, z: 1.52};
 const SPHERE_DIV = 128;
+
 
 function main() {
   // Retrieve <canvas> element
@@ -75,10 +77,6 @@ function main() {
     }
   });
   
-
-
-
-
 
 
 
@@ -128,23 +126,8 @@ function main() {
   var modelMatrix = new Matrix4();  // Model matrix
   var mvpMatrix = new Matrix4();    // Model view projection matrix
 
-
-  //create a limit for new bacteria
-  var bacteriaCap = 5; 
-
-  
-
-  var el = 0; //stores time since last rendered frame
-
-  var scoreText = document.getElementById('score');
-
-
-
-
-
-
-
-
+  //time counter
+  var counter = 0;
 
 
   
@@ -175,12 +158,23 @@ function main() {
     time *= 0.001;  // convert to seconds
     Time();
 
+    
+
+    //every 4 seconds
+    if(Math.floor(time / growth_rate) > counter) {
+      counter++;
+      for(var b = 0; b < bacteria.length; b++) {
+        bacteria[b].grow();
+      }
+    }
+
+
+
     //draw objects
     //playsurface
     draw(gl, playfield.vertices, playfield.colours, playfield.indices, playfield.normals);
 
-
-    //rotate and draw bacteria
+    //bacteria
     for(i = 0; i < bacteria.length; i++) {
       bacteria[i].bactDraw(mvpMatrix, u_MvpMatrix, gl);
     }
