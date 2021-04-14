@@ -36,7 +36,7 @@ function main() {
   document.getElementById("restartBtn").style.display = "none";
 
   // Get the rendering context for WebGL
-  var gl = getWebGLContext(canvas);
+  var gl = canvas.getContext("webgl",{preserveDrawingBuffer: true});
   if (!gl) {
     console.log('Failed to get the rendering context for WebGL');
     return;
@@ -52,7 +52,7 @@ function main() {
   var cyan = {r: 0.0, g: 0.4, b: 1.0}; // <- blueish
   var black = {r: 0.0, g: 0.0, b: 0.0};
   var playfieldSize = {x: 1.5, y: 1.5, z: 1.5};
-  var bacteriaSize = {x: 1.51, y: 1.51, z: 1.5};
+  var bacteriaSize = {x: 1.52, y: 1.52, z: 1.5};
   
   //INITIALIZING TEST OBJECTS
 
@@ -69,7 +69,7 @@ function main() {
   }
 
   object2test = [];
-  for (i = 0; i < 960 ; i++){
+  for (i = 0; i < 1920; i++){
     object2test.push(object2.indices[i]);
   }
 
@@ -80,7 +80,7 @@ function main() {
   }
 
   object3test = [];
-  for (i = 0; i < 576 ; i++){
+  for (i = 0; i < 1344 ; i++){
     object3test.push(object3.indices[i]);
   }
 
@@ -128,7 +128,7 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
     currentAngle = animate(currentAngle);
 
-    canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
+    canvas.onmousedown = function(ev) { click(ev, gl, canvas, bacteria); };
     document.onkeydown = function (ev) {
       if (ev.keyCode == 37) {//rotate left
         modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
@@ -163,7 +163,7 @@ function main() {
 
     //SET ROTATION
     var ANGLE = 87.0;
-    mvpMatrix.rotate(ANGLE, 1, 1, 0);
+    mvpMatrix.rotate(ANGLE, 1, 1, 1);
     gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
     //draw second object
     draw(gl, object2.vertices, object2.colours, object2test);
@@ -369,13 +369,26 @@ function onClickRestart() {
   location.reload();
 }
 
-function click(ev, canvas, bacteria){
+
+function click(ev, gl, canvas, bacteria){
   var x = ev.clientX;
   var y = ev.clientY;
+
+  // const fb = gl.createFramebuffer();
+  // gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
   var rect = ev.target.getBoundingClientRect();
 
   x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
   y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
+
+  var x_canvas = x * gl.canvas.width / gl.canvas.clientWidth;;
+  var y_canvas = gl.canvas.height - y * gl.canvas.height / gl.canvas.clientHeight - 1;
+  
+  // console.log("X: " + x + ", Y: " + y + ", Z: " + z);
+
+  check(gl, x_canvas, y_canvas, x, y);
 
   var target = 0;
   for (i = 0; i < bacteria.length; i++){
@@ -419,6 +432,43 @@ function draw(gl, vertices, colours, indices){
 
   //play surface - change to sphere
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+}
+
+function check(gl, x, y, x2, y2){
+
+  var fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+  var tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  var width = 600;
+  var height = 600;
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+  var pixels = new Uint8Array(4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.readPixels(x2, y2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  console.log(pixels);
+//   var picked = false;
+//   // var canvas = document.getElementById('canvas');
+//   // var gl = canvas.getContext('webgl');
+//   var pixels = new Uint8Array(9);
+//   gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+//   console.log(pixels); // Uint8Array
+
+//   console.log("X: " + x + ", Y: " + y + ", X2: " + x2 + ", Y2: " + y2);
+//   console.log("Pixel color: " + pixels);
+
+//   if (pixels[0] == 255){
+//     picked = true;
+//   }
+
+//   console.log(picked)
+  
+//   return picked;
 }
 
 // function CreateCircle(gl, x, y, r, n){
