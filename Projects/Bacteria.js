@@ -1,11 +1,11 @@
 class Bacteria {
 
     constructor(bacteriaSize, sphereDiv){
-        this.r = Math.random();
-        this.g = Math.random();
-        this.b = Math.random();
+        this.r = Math.round(Math.random()*255)/255;
+        this.g = Math.round(Math.random()*255)/255;
+        this.b = Math.round(Math.random()*255)/255;
 
-        this.angle = Math.random()*360;
+        this.angle = Math.round(Math.random()*360);
         this.xAxis = Math.round(Math.random());
         this.yAxis = Math.round(Math.random());
         this.zAxis = Math.round(Math.random());
@@ -38,6 +38,10 @@ class Bacteria {
             this.indices.push(this.object.indices[i]);
         }
 
+    }
+
+    getColor() {
+        return {r:this.r * 255, g:this.g *255, b:this.b*255};
     }
 
 

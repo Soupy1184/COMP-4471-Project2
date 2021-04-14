@@ -44,7 +44,8 @@ function main() {
   document.getElementById("restartBtn").style.display = "none";
 
   // Get the rendering context for WebGL
-  var gl = getWebGLContext(canvas);
+  //var gl = getWebGLContext(canvas);
+  gl = canvas.getContext("webgl", {preserveDrawingBuffer:true});
   if (!gl) {
     console.log('Failed to get the rendering context for WebGL');
     return;
@@ -76,9 +77,18 @@ function main() {
       ANGLE_STEP = 0.0;
     }
   });
-  
-
-
+  /*
+  window.addEventListener('mousedown', function (ev){
+    var x = ev.clientX;
+    var y = ev.clientY;
+    var rect = ev.target.getBoundingClientRect();
+    var x_canvas = x - rect.left;
+    var y_canvas = rect.bottom - y;
+    console.log(x_canvas + " and " + y_canvas);
+    var color = checkPointColor(gl, Math.round(x_canvas), Math.round(y_canvas));
+    console.log("color: " + color.r + ", " + color.g + ", " + color.b + ", " + color.a);
+  })
+*/
 
 
   //initilize spheres
@@ -97,13 +107,13 @@ function main() {
   bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
 
 //  TEST EVENT TRIGGER
-  window.addEventListener("keydown", function (event) {
+  /*window.addEventListener("keydown", function (event) {
     if(event.key == "a") {
       for(var b = 0; b < bacteria.length; b++) {
         bacteria[b].grow();
       }
     }
-  });
+  });*/
 
   //END SPHERES
 
@@ -141,13 +151,8 @@ function main() {
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
 
-
-
-
+    //animate the angle
     currentAngle = animate(currentAngle);
-    canvas.onmousedown = function(ev) { click(ev, canvas, bacteria); };
-
-  
 
 
     mvpMatrix.set(vpMatrix).multiply(modelMatrix);
@@ -155,20 +160,16 @@ function main() {
 
     // Clear <canvas>
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     time *= 0.001;  // convert to seconds
     Time();
-
-    
-
-    //every 4 seconds
+    //every few seconds
     if(Math.floor(time / growth_rate) > counter) {
       counter++;
       for(var b = 0; b < bacteria.length; b++) {
         bacteria[b].grow();
       }
     }
-
-
 
     //draw objects
     //playsurface
@@ -181,6 +182,11 @@ function main() {
 
     // tell the shader the time
     gl.uniform1f(timeLoc, time);
+
+
+
+    document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria) };
+    //checkPointColor(gl, 300, 300);
 
     requestAnimationFrame(render);
   }
@@ -292,4 +298,50 @@ function draw(gl, vertices, colours, indices){
 
   //play surface - change to sphere
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+}
+
+function checkPointColor(gl, x, y) {
+  //https://stackoverflow.com/questions/44070167/get-color-at-position-webgl/44070611
+  var pixels = new Uint8Array(
+    4 * gl.drawingBufferWidth * gl.drawingBufferHeight
+  );
+  gl.readPixels(
+      0,
+      0,
+      gl.drawingBufferWidth,
+      gl.drawingBufferHeight,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      pixels
+  );
+  // And here's components of a pixel on (x, y):
+  var pixelR = pixels[4 * (y * gl.drawingBufferWidth + x)];
+  var pixelG = pixels[4 * (y * gl.drawingBufferWidth + x) + 1];
+  var pixelB = pixels[4 * (y * gl.drawingBufferWidth + x) + 2];
+  var pixelA = pixels[4 * (y * gl.drawingBufferWidth + x) + 3];
+    return {r:pixelR, g:pixelG, b:pixelB, a:pixelA};
+}
+
+function onClick(ev, gl, bacteria){
+  //get canvas x and y position
+  var x = ev.clientX;
+  var y = ev.clientY;
+  var rect = ev.target.getBoundingClientRect();
+  var x_canvas = x - rect.left;
+  var y_canvas = rect.bottom - y;
+
+  //get color at mouse position
+  var color = checkPointColor(gl, Math.round(x_canvas), Math.round(y_canvas));
+  console.log("color: " + color.r + ", " + color.g + ", " + color.b);
+
+  //delete bacteria with the same color
+  for(i = 0; i < bacteria.length; i++) {
+    bColor = bacteria[i].getColor();
+    console.log("comparing: " + bColor.r +", " + bColor.g + ", " + bColor.b + "\tto:" + color.r + ", " + color.g + ", " + color.b)
+    if(bColor.r == color.r && bColor.g == color.g && bColor.b == color.b) {
+      bacteria.splice(i, 1);
+      break;
+    }
+  }
+
 }
