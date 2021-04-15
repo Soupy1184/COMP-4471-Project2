@@ -121,5 +121,10 @@ Here the bacteria grows every few seconds and spawns in a new bacteria every few
 
 When the player eliminates enough bacteria, the game will enter a winning state and no more bacteria will spawn because the 'spawn_rate' will set to zero.
 
+## Game Lost
+
+<img src="fig\gameLost.png" style="zoom:67%;" />
 
 
+
+Once one of the bacteria has grown too much the program will react by displaying the message showing that you have lost the game.

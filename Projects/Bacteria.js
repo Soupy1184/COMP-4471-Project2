@@ -14,7 +14,7 @@ class Bacteria {
 
         this.object = CreateSphere(bacteriaSize, {r : this.r, g : this.g, b : this.b}, 0, 0, 0);
 
-        this.indices = []
+        this.indices = [];
         
         for(i = 0; i < this.object.indices.length / sphereDiv; i++) {
             this.indices.push(this.object.indices[i]);

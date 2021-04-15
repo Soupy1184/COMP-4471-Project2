@@ -120,8 +120,6 @@ function main() {
   //onClick function
   document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria, canvas) };
 
-  var test = CreateSphere(partSize, cyan, 0, 0, 1.52);
-
   /*
   * Render Loop
   */
@@ -152,7 +150,6 @@ function main() {
     //spawn bacteria every few seconds
     if(spawn_rate != 0) {
       if(Math.floor(time / spawn_rate) > spawnCounter) {
-        console.log("time" + Math.floor(time / spawn_rate) + " :: " + spawnCounter);
         spawnCounter++;
         bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
         console.log("spawned bacteria:" + bacteria.length);
@@ -163,17 +160,11 @@ function main() {
     //playsurface
     draw(gl, playfield.vertices, playfield.colours, playfield.indices);
 
-
-    draw(gl, test.vertices, test.colours, test.indices);
-
     //bacteria
     for(i = 0; i < bacteria.length; i++) {
       bacteria[i].bactDraw(mvpMatrix, u_MvpMatrix, gl);
     }
 
-    /*draw(gl, [0, 1, 10,
-                -1, -1, 10,  
-                1, -1, 10], [1, 0, 1, 1], [0,1,2]);*/
     
     //explosion
     for(var i = 0; i < explosions.length; i++) {
@@ -199,6 +190,18 @@ function main() {
     //update score display
     if(spawn_rate != 0) {
       scoreText.innerHTML = "Score: " + Math.floor(score * 10);
+    }
+
+    var largestGrowth = 0;
+    for(var i = 0; i < bacteria.length; i++) {
+      if(largestGrowth < bacteria[i].getGrowth() && bacteria[i].getAlive() == true) {
+        largestGrowth = bacteria[i].getGrowth();
+      }
+    }
+
+    if(largestGrowth > 28) {
+      scoreText.innerHTML = "You've been overrun";
+      spawn_rate = 0;
     }
 
     requestAnimationFrame(render);
@@ -249,50 +252,7 @@ function CreateSphere(size, colour, xs, ys, zs) {
 
   return {vertices, indices, colours};
 }
-/*
-function CreateSphere(size, colour) {
-  //resource: https://stackoverflow.com/questions/47756053/webgl-try-draw-sphere
-  var ai, si, ci;
-  var aj, sj, cj;
-  var p1, p2;
-  var vertices = [], indices = [];
-  for (j = 0; j <= SPHERE_DIV; j++) {
-    aj = j * Math.PI / SPHERE_DIV;
-    sj = Math.sin(aj);
-    cj = Math.cos(aj);
-    for (i = 0; i <= SPHERE_DIV; i++) {
-      ai = i * 2 * Math.PI / SPHERE_DIV;
-      si = Math.sin(ai);
-      ci = Math.cos(ai);
-      vertices.push(si * sj * size.x);  // X
-      vertices.push(cj * size.y);       // Y
-      vertices.push(ci * sj * size.z);  // Z
-    }
-  }
 
-  for (j = 0; j < SPHERE_DIV; j++) {
-    for (i = 0; i < SPHERE_DIV; i++) {
-      p1 = j * (SPHERE_DIV + 1) + i;
-      p2 = p1 + (SPHERE_DIV + 1);
-      indices.push(p1);
-      indices.push(p2);
-      indices.push(p1 + 1);
-      indices.push(p1 + 1);
-      indices.push(p2);
-      indices.push(p2 + 1);
-    }
-  }
-  //end resource
-
-  var colours = [];
-  for (i = 0; i < vertices.length; i++){
-    colours.push(colour.r);
-    colours.push(colour.g);
-    colours.push(colour.b);
-  }
-
-  return {vertices, indices, colours};
-}*/
 
 function initArrayBuffer(gl, attribute, data, num, type) {
   // Create a buffer object
@@ -410,7 +370,7 @@ function onClick(ev, gl, bacteria, canvas){
   for(i = 0; i < bacteria.length; i++) {
     bColor = bacteria[i].getColor();
     //console.log("comparing: " + bColor.r +", " + bColor.g + ", " + bColor.b + "\tto:" + color.r + ", " + color.g + ", " + color.b)
-    if(bColor.r == color.r && bColor.g == color.g && bColor.b == color.b) {
+    if(bColor.r == color.r && bColor.g == color.g && bColor.b == color.b && spawn_rate != 0) {
       //update score counter
       score += bacteria[i].getGrowth() + 1;
       //spawn explosion
