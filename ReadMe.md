@@ -115,5 +115,11 @@ When the program is launched a score counter and canvas will be displayed. The p
 
 Here the bacteria grows every few seconds and spawns in a new bacteria every few seconds at a different rate. 
 
+## Game Win
+
+<img src="fig\gameWin.png" style="zoom:67%;" />
+
+When the player eliminates enough bacteria, the game will enter a winning state and no more bacteria will spawn because the 'spawn_rate' will set to zero.
+
 
 
