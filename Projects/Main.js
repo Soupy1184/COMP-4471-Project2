@@ -24,8 +24,9 @@ var FSHADER_SOURCE =
 var timer = Date.now();
 var gameIsActive = true;
 var score = 0; //player score
-var ANGLE_STEP = 0.0;
 var growth_rate = 1; //seconds
+var spawn_rate = 3; //seconds
+
 
 //constants
 const purple = {r: 1.0, g: 1.0, b: 0.7}; // <- yellowish
@@ -34,14 +35,13 @@ const black = {r: 0.0, g: 0.0, b: 0.0};
 const playfieldSize = {x: 1.5, y: 1.5, z: 1.5};
 const bacteriaSize = {x: 1.52, y: 1.52, z: 1.52};
 const SPHERE_DIV = 128;
+const rotateSpeed = 4;
+const max_bacteria = 10;
 
 
 function main() {
   // Retrieve <canvas> element
   var canvas = document.querySelector('#webgl');
-  
-  //hide restart button
-  document.getElementById("restartBtn").style.display = "none";
 
   // Get the rendering context for WebGL
   //var gl = getWebGLContext(canvas);
@@ -63,32 +63,14 @@ function main() {
 
   window.addEventListener("keydown", function (event) {
       if(event.key == "ArrowLeft") {
+        currentAngle -= rotateSpeed
         modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
-        ANGLE_STEP = -70.0;
       } else if(event.key == "ArrowRight") {
+        currentAngle += rotateSpeed
         modelMatrix.setRotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
-        ANGLE_STEP = 70.0;
       }
     
   });
-
-  window.addEventListener('keyup', function (evt) {
-    if (evt.key == "ArrowLeft" || evt.key == "ArrowRight") {
-      ANGLE_STEP = 0.0;
-    }
-  });
-  /*
-  window.addEventListener('mousedown', function (ev){
-    var x = ev.clientX;
-    var y = ev.clientY;
-    var rect = ev.target.getBoundingClientRect();
-    var x_canvas = x - rect.left;
-    var y_canvas = rect.bottom - y;
-    console.log(x_canvas + " and " + y_canvas);
-    var color = checkPointColor(gl, Math.round(x_canvas), Math.round(y_canvas));
-    console.log("color: " + color.r + ", " + color.g + ", " + color.b + ", " + color.a);
-  })
-*/
 
 
   //initilize spheres
@@ -105,15 +87,7 @@ function main() {
   bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
   bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
   bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
-
-//  TEST EVENT TRIGGER
-  /*window.addEventListener("keydown", function (event) {
-    if(event.key == "a") {
-      for(var b = 0; b < bacteria.length; b++) {
-        bacteria[b].grow();
-      }
-    }
-  });*/
+  console.log("created " + bacteria.length + " bacteria");
 
   //END SPHERES
 
@@ -136,11 +110,16 @@ function main() {
   var modelMatrix = new Matrix4();  // Model matrix
   var mvpMatrix = new Matrix4();    // Model view projection matrix
 
-  //time counter
-  var counter = 0;
+  //time counters
+  var growthCounter = 0;
+  var spawnCounter = 0;
 
+  //html score
+  var scoreText = document.getElementById('score');
 
-  
+  //onClick function
+  document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria) };
+
   /*
   * Render Loop
   */
@@ -150,9 +129,6 @@ function main() {
     // Specify the color for clearing <canvas>
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
-
-    //animate the angle
-    currentAngle = animate(currentAngle);
 
 
     mvpMatrix.set(vpMatrix).multiply(modelMatrix);
@@ -164,10 +140,16 @@ function main() {
     time *= 0.001;  // convert to seconds
     Time();
     //every few seconds
-    if(Math.floor(time / growth_rate) > counter) {
-      counter++;
+    if(Math.floor(time / growth_rate) > growthCounter) {
+      growthCounter++;
       for(var b = 0; b < bacteria.length; b++) {
         bacteria[b].grow();
+      }
+    }
+    if(Math.floor(time / spawn_rate) > spawnCounter) {
+      spawnCounter++;
+      if(bacteria.length < max_bacteria) {
+        bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
       }
     }
 
@@ -183,10 +165,10 @@ function main() {
     // tell the shader the time
     gl.uniform1f(timeLoc, time);
 
+    
 
-
-    document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria) };
-    //checkPointColor(gl, 300, 300);
+    //update score display
+    scoreText.innerHTML = "Score: " + Math.floor(score * 10);
 
     requestAnimationFrame(render);
   }
@@ -278,7 +260,7 @@ function onClickRestart() {
 
 // Last time that this function was called
 var g_last = Date.now();
-function animate(angle) {
+function animate(angle, ANGLE_STEP) {
   // Calculate the elapsed time
   var now = Date.now();
   var elapsed = now - g_last;
@@ -332,14 +314,17 @@ function onClick(ev, gl, bacteria){
 
   //get color at mouse position
   var color = checkPointColor(gl, Math.round(x_canvas), Math.round(y_canvas));
-  console.log("color: " + color.r + ", " + color.g + ", " + color.b);
+  //console.log("color: " + color.r + ", " + color.g + ", " + color.b);
 
   //delete bacteria with the same color
   for(i = 0; i < bacteria.length; i++) {
     bColor = bacteria[i].getColor();
-    console.log("comparing: " + bColor.r +", " + bColor.g + ", " + bColor.b + "\tto:" + color.r + ", " + color.g + ", " + color.b)
+    //console.log("comparing: " + bColor.r +", " + bColor.g + ", " + bColor.b + "\tto:" + color.r + ", " + color.g + ", " + color.b)
     if(bColor.r == color.r && bColor.g == color.g && bColor.b == color.b) {
+      score += bacteria[i].getGrowth() + 1;
       bacteria.splice(i, 1);
+      console.log("Destroyed 1 bacteria, " + bacteria.length + " left");
+      
       break;
     }
   }

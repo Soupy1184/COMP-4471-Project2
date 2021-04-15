@@ -40,6 +40,10 @@ class Bacteria {
 
     }
 
+    getGrowth() {
+        return this.growth;
+    }
+
     getColor() {
         return {r:this.r * 255, g:this.g *255, b:this.b*255};
     }
