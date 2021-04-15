@@ -24,7 +24,7 @@ var timer = Date.now();
 var gameIsActive = true;
 var score = 0; //player score
 var growth_rate = 1; //seconds
-var spawn_rate = 3; //seconds
+var spawn_rate = 4; //seconds
 var explosions = [];
 
 
@@ -34,6 +34,7 @@ const cyan = {r: 0.0, g: 0.4, b: 1.0}; // <- blueish
 const black = {r: 0.0, g: 0.0, b: 0.0};
 const playfieldSize = {x: 1.5, y: 1.5, z: 1.5};
 const bacteriaSize = {x: 1.52, y: 1.52, z: 1.52};
+const partSize = {x: 0.1, y: 0.1, z: 0.1};
 const SPHERE_DIV = 128;
 const rotateSpeed = 4;
 const max_bacteria = 10;
@@ -75,7 +76,7 @@ function main() {
 
   //initilize spheres
 
-  var playfield = CreateSphere(playfieldSize, black);
+  var playfield = CreateSphere(playfieldSize, black, 0, 0, 0);
   if (!playfield) {
     console.log('Failed to set the vertex information');
     return;
@@ -118,7 +119,9 @@ function main() {
   var scoreText = document.getElementById('score');
 
   //onClick function
-  document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria) };
+  document.body.onmousedown = function(ev) { onClick(ev, gl, bacteria, canvas) };
+
+  var test = CreateSphere(partSize, cyan, 0, 0, 1.52);
 
   /*
   * Render Loop
@@ -146,28 +149,53 @@ function main() {
         bacteria[b].grow();
       }
     }
+
     //spawn bacteria every few seconds
     if(Math.floor(time / spawn_rate) > spawnCounter) {
       spawnCounter++;
       if(bacteria.length < max_bacteria) {
         bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
-        console.log("spawned bacteria");
+        console.log("spawned bacteria:" + bacteria.length);
       }
     }
 
     //draw objects
     //playsurface
-    draw(gl, playfield.vertices, playfield.colours, playfield.indices, playfield.normals);
+    draw(gl, playfield.vertices, playfield.colours, playfield.indices);
+
+
+    draw(gl, test.vertices, test.colours, test.indices);
 
     //bacteria
     for(i = 0; i < bacteria.length; i++) {
       bacteria[i].bactDraw(mvpMatrix, u_MvpMatrix, gl);
     }
 
+    /*draw(gl, [0, 1, 10,
+                -1, -1, 10,  
+                1, -1, 10], [1, 0, 1, 1], [0,1,2]);*/
+    
+    //explosion
+    for(var i = 0; i < explosions.length; i++) {
+      explosions[i].step();
+      draw(gl, explosions[i].getVert(), [1, 0, 1], explosions[i].getIndices());
+    }
+
     // tell the shader the time
     gl.uniform1f(timeLoc, time);
 
-    
+    var anyAlive = true;
+    for(var i = 0; i < bacteria.length; i++) {
+      if(!bacteria[i].getAlive()) {
+        anyAlive = false;
+      }
+    }
+
+
+    if(!anyAlive) {
+      scoreText.innerHTML = "You've eliminated the bacteria!";
+      spawn_rate = 0;
+    }
 
     //update score display
     scoreText.innerHTML = "Score: " + Math.floor(score * 10);
@@ -177,6 +205,50 @@ function main() {
   requestAnimationFrame(render);
 }
 
+function CreateSphere(size, colour, xs, ys, zs) {
+  //resource: https://stackoverflow.com/questions/47756053/webgl-try-draw-sphere
+  var ai, si, ci;
+  var aj, sj, cj;
+  var p1, p2;
+  var vertices = [], indices = [];
+  for (j = 0; j <= SPHERE_DIV; j++) {
+    aj = j * Math.PI / SPHERE_DIV;
+    sj = Math.sin(aj);
+    cj = Math.cos(aj);
+    for (i = 0; i <= SPHERE_DIV; i++) {
+      ai = i * 2 * Math.PI / SPHERE_DIV;
+      si = Math.sin(ai);
+      ci = Math.cos(ai);
+      vertices.push(si * sj * size.x + xs);  // X
+      vertices.push(cj * size.y + ys);       // Y
+      vertices.push(ci * sj * size.z + zs);  // Z
+    }
+  }
+
+  for (j = 0; j < SPHERE_DIV; j++) {
+    for (i = 0; i < SPHERE_DIV; i++) {
+      p1 = j * (SPHERE_DIV + 1) + i;
+      p2 = p1 + (SPHERE_DIV + 1);
+      indices.push(p1);
+      indices.push(p2);
+      indices.push(p1 + 1);
+      indices.push(p1 + 1);
+      indices.push(p2);
+      indices.push(p2 + 1);
+    }
+  }
+  //end resource
+
+  var colours = [];
+  for (i = 0; i < vertices.length; i++){
+    colours.push(colour.r);
+    colours.push(colour.g);
+    colours.push(colour.b);
+  }
+
+  return {vertices, indices, colours};
+}
+/*
 function CreateSphere(size, colour) {
   //resource: https://stackoverflow.com/questions/47756053/webgl-try-draw-sphere
   var ai, si, ci;
@@ -219,7 +291,7 @@ function CreateSphere(size, colour) {
   }
 
   return {vertices, indices, colours};
-}
+}*/
 
 function initArrayBuffer(gl, attribute, data, num, type) {
   // Create a buffer object
@@ -272,6 +344,15 @@ function animate(angle, ANGLE_STEP) {
   return newAngle %= 360;
 }
 
+function draw2D(gl, vertices){
+  //if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 2, gl.FLOAT)) return -1;
+  //if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 2, gl.FLOAT)) return -1;
+
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  gl.drawArrays(gl.LINE_LOOP, 0, 3);
+}
+
+
 function draw(gl, vertices, colours, indices){
   if (!initArrayBuffer(gl, 'a_Position', new Float32Array(vertices), 3, gl.FLOAT)) return -1;
   if (!initArrayBuffer(gl, 'a_Colour', new Float32Array(colours), 3, gl.FLOAT)) return -1;
@@ -306,13 +387,19 @@ function checkPointColor(gl, x, y) {
     return {r:pixelR, g:pixelG, b:pixelB, a:pixelA};
 }
 
-function onClick(ev, gl, bacteria){
+function onClick(ev, gl, bacteria, canvas){
   //get canvas x and y position
   var x = ev.clientX;
   var y = ev.clientY;
   var rect = ev.target.getBoundingClientRect();
   var x_canvas = x - rect.left;
   var y_canvas = rect.bottom - y;
+
+  x_clicked = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
+  y_clicked = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
+
+
+  console.log("x " + x_clicked*2 + " y " + y_clicked*2);
 
   //get color at mouse position
   var color = checkPointColor(gl, Math.round(x_canvas), Math.round(y_canvas));
@@ -326,11 +413,11 @@ function onClick(ev, gl, bacteria){
       //update score counter
       score += bacteria[i].getGrowth() + 1;
       //spawn explosion
-      explosions.push(new Explosion(x_canvas, y_canvas, bacteria[i].getGrowth()))
-
-      //delete bacteria
-      bacteria.splice(i, 1);
-      console.log("Destroyed 1 bacteria, " + bacteria.length + " left");
+      explosions.push(new Explosion(x_clicked*2, y_clicked*2, bacteria[i].getGrowth()));
+      //kill bacteria
+      //bacteria.splice(i, 1);
+      bacteria[i].kill();
+      console.log("killed 1 bacteria, " + bacteria.length + " left");
       break;
     }
   }

@@ -10,7 +10,9 @@ class Bacteria {
         this.yAxis = Math.round(Math.random());
         this.zAxis = Math.round(Math.random());
 
-        this.object = CreateSphere(bacteriaSize, {r : this.r, g : this.g, b : this.b});
+        this.alive = true;
+
+        this.object = CreateSphere(bacteriaSize, {r : this.r, g : this.g, b : this.b}, 0, 0, 0);
 
         this.indices = []
         
@@ -19,15 +21,16 @@ class Bacteria {
         }
 
         this.growth = 0;
-
         this.sphereDiv = sphereDiv;
-        
     }
 
     bactDraw(mvpMatrix, u_MvpMatrix, gl) {
         mvpMatrix.rotate(this.angle, this.xAxis, this.yAxis, this.zAxis);
         gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
-        draw(gl, this.object.vertices, this.object.colours, this.indices);
+
+        if(this.alive) {
+            draw(gl, this.object.vertices, this.object.colours, this.indices);
+        }
     }
 
     grow() {
@@ -46,6 +49,14 @@ class Bacteria {
 
     getColor() {
         return {r:this.r * 255, g:this.g *255, b:this.b*255};
+    }
+
+    kill() {
+        this.alive = false;
+    }
+
+    getAlive() {
+        return this.alive;
     }
 
 
