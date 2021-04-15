@@ -37,7 +37,6 @@ const bacteriaSize = {x: 1.52, y: 1.52, z: 1.52};
 const partSize = {x: 0.1, y: 0.1, z: 0.1};
 const SPHERE_DIV = 128;
 const rotateSpeed = 4;
-const max_bacteria = 10;
 
 
 function main() {
@@ -151,9 +150,10 @@ function main() {
     }
 
     //spawn bacteria every few seconds
-    if(Math.floor(time / spawn_rate) > spawnCounter) {
-      spawnCounter++;
-      if(bacteria.length < max_bacteria) {
+    if(spawn_rate != 0) {
+      if(Math.floor(time / spawn_rate) > spawnCounter) {
+        console.log("time" + Math.floor(time / spawn_rate) + " :: " + spawnCounter);
+        spawnCounter++;
         bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
         console.log("spawned bacteria:" + bacteria.length);
       }
@@ -184,21 +184,22 @@ function main() {
     // tell the shader the time
     gl.uniform1f(timeLoc, time);
 
-    var anyAlive = true;
+    var killCounter = 0;
     for(var i = 0; i < bacteria.length; i++) {
       if(!bacteria[i].getAlive()) {
-        anyAlive = false;
+        killCounter++;
       }
     }
 
-
-    if(!anyAlive) {
-      scoreText.innerHTML = "You've eliminated the bacteria!";
+    if(killCounter > 3) {
+      scoreText.innerHTML = "You've eliminated bacteria!";
       spawn_rate = 0;
     }
 
     //update score display
-    scoreText.innerHTML = "Score: " + Math.floor(score * 10);
+    if(spawn_rate != 0) {
+      scoreText.innerHTML = "Score: " + Math.floor(score * 10);
+    }
 
     requestAnimationFrame(render);
   }
