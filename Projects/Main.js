@@ -1,4 +1,3 @@
-// RotatingTriangle.js (c) 2012 matsuda
 // Vertex shader program
 var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
@@ -26,6 +25,7 @@ var gameIsActive = true;
 var score = 0; //player score
 var growth_rate = 1; //seconds
 var spawn_rate = 3; //seconds
+var explosions = [];
 
 
 //constants
@@ -146,10 +146,12 @@ function main() {
         bacteria[b].grow();
       }
     }
+    //spawn bacteria every few seconds
     if(Math.floor(time / spawn_rate) > spawnCounter) {
       spawnCounter++;
       if(bacteria.length < max_bacteria) {
         bacteria.push(new Bacteria(bacteriaSize, SPHERE_DIV));
+        console.log("spawned bacteria");
       }
     }
 
@@ -321,12 +323,17 @@ function onClick(ev, gl, bacteria){
     bColor = bacteria[i].getColor();
     //console.log("comparing: " + bColor.r +", " + bColor.g + ", " + bColor.b + "\tto:" + color.r + ", " + color.g + ", " + color.b)
     if(bColor.r == color.r && bColor.g == color.g && bColor.b == color.b) {
+      //update score counter
       score += bacteria[i].getGrowth() + 1;
+      //spawn explosion
+      explosions.push(new Explosion(x_canvas, y_canvas, bacteria[i].getGrowth()))
+
+      //delete bacteria
       bacteria.splice(i, 1);
       console.log("Destroyed 1 bacteria, " + bacteria.length + " left");
-      
       break;
     }
   }
 
 }
+
